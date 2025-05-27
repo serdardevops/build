@@ -134,7 +134,80 @@ install_kubernetes() {
     echo "$WORKER_IP worker" >> /etc/hosts
     
     # Kubernetes master başlat
-    kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$MASTER_IP
+    log "Kubernetes master başlatılıyor..."
+    
+    # API sunucusu için gerekli port'un açık olduğunu kontrol et
+    if ! nc -z localhost 6443; then
+        log "Port 6443 erişilebilir durumda, devam ediliyor."
+    else
+        warn "Port 6443 zaten kullanımda. Önceki bir kurulum olabilir."
+        log "Önceki kurulumu temizleme girişiminde bulunuluyor..."
+        kubeadm reset -f || true
+        systemctl restart kubelet containerd
+        sleep 10
+    fi
+    
+    # kubelet servisinin çalıştığından emin ol
+    systemctl enable kubelet
+    systemctl restart kubelet
+    sleep 5
+    
+    # kubeadm init komutunu çalıştır
+    if ! kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$MASTER_IP; then
+        error "Kubernetes master başlatılamadı. Hata ayıklama başlıyor..."
+        
+        # Hata ayıklama bilgilerini topla
+        log "kubelet durumu kontrol ediliyor..."
+        systemctl status kubelet
+        
+        log "kubelet günlükleri kontrol ediliyor..."
+        journalctl -xeu kubelet | tail -n 50
+        
+        log "API sunucusu konteynerlerini kontrol ediliyor..."
+        crictl --runtime-endpoint unix:///var/run/containerd/containerd.sock ps -a | grep kube | grep -v pause
+        
+        log "kube-apiserver günlükleri kontrol ediliyor..."
+        for CID in $(crictl --runtime-endpoint unix:///var/run/containerd/containerd.sock ps -a | grep kube-apiserver | awk '{print $1}'); do
+            crictl --runtime-endpoint unix:///var/run/containerd/containerd.sock logs $CID
+        done
+        
+        log "Ağ yapılandırması kontrol ediliyor..."
+        ip a
+        
+        log "DNS çözümlemesi kontrol ediliyor..."
+        cat /etc/hosts
+        
+        log "Bellek durumu kontrol ediliyor..."
+        free -m
+        
+        # Yaygın sorunları düzeltmeye çalış
+        log "Yaygın sorunları düzeltme girişiminde bulunuluyor..."
+        
+        # containerd yeniden başlat
+        systemctl restart containerd
+        sleep 10
+        
+        # kubelet yeniden başlat
+        systemctl restart kubelet
+        sleep 10
+        
+        # Tekrar deneyin
+        log "Kubernetes master'ı tekrar başlatmayı deneniyor..."
+        kubeadm reset -f
+        sleep 10
+        
+        # Daha fazla bellek için swap kontrolü
+        if [ "$(free -m | awk '/^Swap:/ {print $2}')" -gt 0 ]; then
+            log "Swap hala aktif, kapatılıyor..."
+            swapoff -a
+        fi
+        
+        # Son bir deneme
+        if ! kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=$MASTER_IP --v=5; then
+            error "Kubernetes master başlatılamadı. Lütfen manuel olarak sorun giderin."
+            exit 1
+        fi
+    fi
     
     # kubectl yapılandırması
     mkdir -p /home/ubuntu/.kube
@@ -520,11 +593,105 @@ EOF
     log "Cluster bilgileri /home/ubuntu/cluster-info.txt dosyasına kaydedildi"
 }
 
+# Ağ ön gereksinimlerini kontrol et
+check_network_prerequisites() {
+    log "Ağ ön gereksinimleri kontrol ediliyor..."
+    
+    # Gerekli araçları kur
+    apt install -y net-tools iputils-ping netcat-openbsd
+
+    # Kernel modüllerini yükle
+    log "Kernel modülleri yükleniyor..."
+    cat > /etc/modules-load.d/k8s.conf << EOF
+overlay
+br_netfilter
+EOF
+    
+    modprobe overlay
+    modprobe br_netfilter
+    
+    # Kernel parametrelerini ayarla
+    log "Kernel parametreleri yapılandırılıyor..."
+    cat > /etc/sysctl.d/k8s.conf << EOF
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+    
+    sysctl --system
+    
+    # IP adresi kontrolü
+    log "IP adresi kontrolü yapılıyor..."
+    CURRENT_IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "127.0.0.1" | head -1)
+    
+    if [ "$CURRENT_IP" != "$MASTER_IP" ]; then
+        warn "Yapılandırılan IP ($MASTER_IP) ile mevcut IP ($CURRENT_IP) eşleşmiyor."
+        warn "Bu, kubeadm init sırasında sorunlara neden olabilir."
+        
+        # Doğru IP'yi kullanmak için kullanıcıya sor
+        log "Doğru IP adresini kullanmak için aşağıdaki komutu çalıştırabilirsiniz:"
+        log "MASTER_IP=$CURRENT_IP ./master-kurulum.sh"
+        
+        read -p "Yapılandırılan IP ($MASTER_IP) ile devam edilsin mi? (e/h): " CONTINUE
+        if [ "$CONTINUE" != "e" ]; then
+            log "IP düzeltmesi ile yeniden başlatılıyor..."
+            MASTER_IP=$CURRENT_IP
+            log "MASTER_IP=$MASTER_IP olarak ayarlandı."
+        fi
+    fi
+    
+    # Port kontrolü - 6443 açık mı?
+    log "API server port kontrolü yapılıyor..."
+    if nc -z localhost 6443; then
+        warn "Port 6443 zaten kullanımda!"
+        log "Port 6443'ü kullanan servis: $(lsof -i:6443 || netstat -tulpn | grep 6443)"
+        
+        read -p "Port 6443'ü kullanmaya çalışan servisleri durdurup devam etmek istiyor musunuz? (e/h): " STOP_SERVICE
+        if [ "$STOP_SERVICE" == "e" ]; then
+            log "6443 portunu kullanan servisleri durdurma girişiminde bulunuluyor..."
+            
+            # Önceki Kubernetes kurulumunu temizle
+            if command -v kubeadm &> /dev/null; then
+                kubeadm reset -f
+            fi
+            
+            # containerd ve kubelet'i yeniden başlat
+            systemctl stop kubelet containerd
+            systemctl start containerd
+            sleep 5
+        else
+            error "Port 6443 kullanımda ve servisler durdurulmadı. Kurulum iptal ediliyor."
+            exit 1
+        fi
+    fi
+    
+    # DNS kontrolü
+    log "DNS çözümleme kontrolü yapılıyor..."
+    if ! host google.com > /dev/null 2>&1 && ! nslookup google.com > /dev/null 2>&1; then
+        warn "DNS çözümlemesi çalışmıyor gibi görünüyor. Bu, container image'larını çekerken sorunlara neden olabilir."
+        
+        # DNS sunucuları kontrol et
+        log "DNS yapılandırması kontrol ediliyor..."
+        cat /etc/resolv.conf
+        
+        # Geçici çözüm olarak Google DNS ekle
+        log "Geçici çözüm olarak Google DNS ekleniyor..."
+        cat > /etc/resolv.conf << EOF
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+$(cat /etc/resolv.conf)
+EOF
+    fi
+    
+    log "Ağ ön gereksinimleri kontrol edildi."
+}
+
 # Ana kurulum
 main() {
     log "Master makine kurulumu başlıyor..."
     
     update_system
+    check_network_prerequisites
     setup_firewall
     install_docker
     install_kubernetes

@@ -112,16 +112,58 @@ install_kubernetes() {
     apt-mark hold kubelet kubeadm kubectl
     
     # containerd yapılandırması
+    log "containerd yapılandırılıyor..."
+    
+    # Containerd'in mevcut olup olmadığını kontrol et
+    if [ ! -d "/etc/containerd" ]; then
+        mkdir -p /etc/containerd
+    fi
+    
     containerd config default | tee /etc/containerd/config.toml
     sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+    
+    # Containerd'i yeniden başlat
     systemctl restart containerd
     
-    # Hostname ve hosts dosyasını yapılandır
-    hostnamectl set-hostname worker
-    echo "$MASTER_IP master" >> /etc/hosts
-    echo "$WORKER_IP worker" >> /etc/hosts
+    # Containerd'in çalıştığından emin ol
+    if ! systemctl is-active containerd; then
+        error "Containerd servisi başlatılamadı. Lütfen kontrol edin."
+        systemctl status containerd
+        exit 1
+    fi
     
-    log "Kubernetes kuruldu"
+    # Hostname ve hosts dosyasını yapılandır
+    log "Hostname ve hosts yapılandırılıyor..."
+    hostnamectl set-hostname worker
+    
+    # Hosts dosyasında girdiler varsa tekrar ekleme
+    if ! grep -q "$MASTER_IP master" /etc/hosts; then
+        echo "$MASTER_IP master" >> /etc/hosts
+    fi
+    
+    if ! grep -q "$WORKER_IP worker" /etc/hosts; then
+        echo "$WORKER_IP worker" >> /etc/hosts
+    fi
+    
+    # Master'a ping atabildiğimizi kontrol et
+    if ! ping -c 1 master > /dev/null 2>&1; then
+        warn "Master node'a ping atılamıyor. Hosts dosyası doğru yapılandırılmış mı?"
+        log "DNS testi yapılıyor..."
+        cat /etc/hosts
+        ip a
+    fi
+    
+    # kubelet servisini yeniden başlat
+    log "kubelet servisi yapılandırılıyor..."
+    systemctl enable kubelet
+    systemctl restart kubelet
+    
+    # kubelet'in çalıştığından emin ol
+    if ! systemctl is-active kubelet > /dev/null 2>&1; then
+        warn "kubelet servisi başlatılamadı. Bu normal olabilir, cluster'a katılım sonrası aktif olacaktır."
+    fi
+    
+    log "Kubernetes kurulumu tamamlandı. Worker node cluster'a katılmaya hazır."
 }
 
 # Monitoring araçları kurulumu
@@ -241,11 +283,101 @@ show_join_instructions() {
     log "cat /home/ubuntu/join-command.txt | ssh ubuntu@$WORKER_IP \"sudo bash\""
 }
 
+# Ağ ön gereksinimlerini kontrol et
+check_network_prerequisites() {
+    log "Ağ ön gereksinimleri kontrol ediliyor..."
+    
+    # Gerekli araçları kur
+    apt install -y net-tools iputils-ping netcat-openbsd
+
+    # Kernel modüllerini yükle
+    log "Kernel modülleri yükleniyor..."
+    cat > /etc/modules-load.d/k8s.conf << EOF
+overlay
+br_netfilter
+EOF
+    
+    modprobe overlay
+    modprobe br_netfilter
+    
+    # Kernel parametrelerini ayarla
+    log "Kernel parametreleri yapılandırılıyor..."
+    cat > /etc/sysctl.d/k8s.conf << EOF
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+    
+    sysctl --system
+    
+    # IP adresi kontrolü
+    log "IP adresi kontrolü yapılıyor..."
+    CURRENT_IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "127.0.0.1" | head -1)
+    
+    if [ "$CURRENT_IP" != "$WORKER_IP" ]; then
+        warn "Yapılandırılan IP ($WORKER_IP) ile mevcut IP ($CURRENT_IP) eşleşmiyor."
+        warn "Bu, Kubernetes node join işlemi sırasında sorunlara neden olabilir."
+        
+        # Doğru IP'yi kullanmak için kullanıcıya sor
+        log "Doğru IP adresini kullanmak için aşağıdaki komutu çalıştırabilirsiniz:"
+        log "WORKER_IP=$CURRENT_IP ./worker-kurulum.sh"
+        
+        read -p "Yapılandırılan IP ($WORKER_IP) ile devam edilsin mi? (e/h): " CONTINUE
+        if [ "$CONTINUE" != "e" ]; then
+            log "IP düzeltmesi ile yeniden başlatılıyor..."
+            WORKER_IP=$CURRENT_IP
+            log "WORKER_IP=$WORKER_IP olarak ayarlandı."
+        fi
+    fi
+    
+    # Master'a ping kontrolü
+    log "Master node erişim kontrolü yapılıyor..."
+    if ! ping -c 1 $MASTER_IP > /dev/null 2>&1; then
+        warn "Master node'a ($MASTER_IP) ping atılamıyor."
+        warn "Bu, worker'ın master'a katılamamasına neden olabilir."
+        
+        # Ağ arayüzlerini göster
+        log "Ağ arayüzleri:"
+        ip a
+        
+        # Route tablosunu göster
+        log "Route tablosu:"
+        ip route
+        
+        read -p "Devam etmek istiyor musunuz? (e/h): " CONTINUE_NETWORK
+        if [ "$CONTINUE_NETWORK" != "e" ]; then
+            error "Master node erişilemez durumda. Kurulum iptal ediliyor."
+            exit 1
+        fi
+    fi
+    
+    # DNS kontrolü
+    log "DNS çözümleme kontrolü yapılıyor..."
+    if ! host google.com > /dev/null 2>&1 && ! nslookup google.com > /dev/null 2>&1; then
+        warn "DNS çözümlemesi çalışmıyor gibi görünüyor. Bu, container image'larını çekerken sorunlara neden olabilir."
+        
+        # DNS sunucuları kontrol et
+        log "DNS yapılandırması kontrol ediliyor..."
+        cat /etc/resolv.conf
+        
+        # Geçici çözüm olarak Google DNS ekle
+        log "Geçici çözüm olarak Google DNS ekleniyor..."
+        cat > /etc/resolv.conf << EOF
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+$(cat /etc/resolv.conf)
+EOF
+    fi
+    
+    log "Ağ ön gereksinimleri kontrol edildi."
+}
+
 # Ana kurulum
 main() {
     log "Worker makine kurulumu başlıyor..."
     
     update_system
+    check_network_prerequisites
     setup_firewall
     install_docker
     install_kubernetes
