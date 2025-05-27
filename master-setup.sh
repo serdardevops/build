@@ -216,8 +216,16 @@ install_sonarqube() {
         unzip sonarqube-9.9.0.65466.zip
         mv sonarqube-9.9.0.65466 sonarqube
         
-        # ARM64 için wrapper.conf düzenleme
-        sed -i 's/wrapper.java.command=java/wrapper.java.command=\/usr\/bin\/java/' /opt/sonarqube/conf/wrapper.conf
+        # ARM64 için wrapper.conf oluşturma ve düzenleme
+        mkdir -p /opt/sonarqube/conf/
+        echo "wrapper.java.command=/usr/bin/java" > /opt/sonarqube/conf/wrapper.conf
+        
+        # SonarQube başlatma scriptini ARM için düzenle
+        if [ ! -d "/opt/sonarqube/bin/linux-arm64" ]; then
+            mkdir -p /opt/sonarqube/bin/linux-arm64
+            cp /opt/sonarqube/bin/linux-x86-64/sonar.sh /opt/sonarqube/bin/linux-arm64/
+            chmod +x /opt/sonarqube/bin/linux-arm64/sonar.sh
+        fi
     else
         wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-9.9.0.65466.zip
         unzip sonarqube-9.9.0.65466.zip
