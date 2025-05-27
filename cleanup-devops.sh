@@ -12,10 +12,10 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # Makine bilgileri
-MASTER_IP="192.168.1.126"
-NODE1_IP="192.168.1.127"
+MASTER_IP="192.168.1.131"
+WORKER_IP="192.168.1.127"
 MASTER_NAME="master"
-NODE1_NAME="worker"
+WORKER_NAME="worker"
 
 log() {
     echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] $1${NC}"

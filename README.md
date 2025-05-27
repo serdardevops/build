@@ -4,7 +4,7 @@ Bu script, Multipass üzerinde çalışan 2 Ubuntu 24.04 Noble makinesine kapsam
 
 ## 📋 Kurulacak Araçlar
 
-### Master Makine (192.168.1.116)
+### Master Makine (192.168.1.131)
 - **Docker** - Container platformu
 - **Kubernetes Master** - Container orkestrasyon master node (v1.32)
 - **Jenkins** - CI/CD automation server (JDK 21)
@@ -76,11 +76,11 @@ Kurulum tamamlandığında aşağıdaki servislere erişebilirsiniz:
 
 | Servis | URL | Kullanıcı | Şifre Lokasyonu |
 |--------|-----|-----------|----------------|
-| Jenkins | http://192.168.1.116:8080 | admin | `/home/ubuntu/jenkins-password.txt` |
-| SonarQube | http://192.168.1.116:9000 | admin | admin |
-| ArgoCD | http://192.168.1.116:30080 | admin | `/home/ubuntu/argocd-password.txt` |
-| Kubernetes Dashboard | https://192.168.1.116:30001 | - | `/home/ubuntu/dashboard-token.txt` |
-| Nginx Örnek | http://192.168.1.116:30090 | - | - |
+| Jenkins | http://192.168.1.131:8080 | admin | `/home/ubuntu/jenkins-password.txt` |
+| SonarQube | http://192.168.1.131:9000 | admin | admin |
+| ArgoCD | http://192.168.1.131:30080 | admin | `/home/ubuntu/argocd-password.txt` |
+| Kubernetes Dashboard | https://192.168.1.131:30001 | - | `/home/ubuntu/dashboard-token.txt` |
+| Nginx Örnek | http://192.168.1.131:30090 | - | - |
 | Node Exporter | http://192.168.1.117:9100/metrics | - | - |
 
 ## 🆕 Ubuntu 24.04 Noble Özellikleri

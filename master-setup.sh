@@ -20,8 +20,8 @@ error() {
 }
 
 # IP adresleri
-MASTER_IP="192.168.1.126"
-NODE1_IP="192.168.1.127"
+MASTER_IP="192.168.1.131"
+WORKER_IP="192.168.1.127"
 
 # Mimariye göre mimari değişkenini belirle
 ARCH=$(dpkg --print-architecture)
@@ -66,8 +66,8 @@ setup_firewall() {
     # ArgoCD
     ufw allow 30080
     
-    # Node1 ile iletişim
-    ufw allow from $NODE1_IP
+    # Worker ile iletişim
+    ufw allow from $WORKER_IP
     
     # NodePort aralığı
     ufw allow 30000:32767/tcp

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DevOps Araçları Kurulum Scripti
-# Master ve Node1 makineleri için otomatik kurulum
+# Master ve Worker makineleri için otomatik kurulum
 
 set -e
 
@@ -40,10 +40,10 @@ check_architecture() {
 }
 
 # Makine bilgileri
-MASTER_IP="192.168.1.126"
-NODE1_IP="192.168.1.127"
+MASTER_IP="192.168.1.131"
+WORKER_IP="192.168.1.127"
 MASTER_NAME="master"
-NODE1_NAME="worker"
+WORKER_NAME="worker"
 
 # SSH anahtarı oluştur
 setup_ssh_keys() {
@@ -89,7 +89,7 @@ deploy_and_run() {
 main() {
     log "DevOps araçları kurulum sürecine başlanıyor..."
     log "Master IP: $MASTER_IP"
-    log "Node1 IP: $NODE1_IP"
+    log "Worker IP: $WORKER_IP"
     
     # Sistem mimarisini kontrol et
     check_architecture
@@ -103,7 +103,7 @@ main() {
     
     # Worker makinesine kurulum
     log "Worker makinesinde kurulum başlatılıyor..."
-    deploy_and_run $NODE1_NAME "worker-setup.sh"
+    deploy_and_run $WORKER_NAME "worker-setup.sh"
     
     # Kubernetes cluster kurulumu
     log "Kubernetes cluster yapılandırması başlatılıyor..."

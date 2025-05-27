@@ -20,7 +20,7 @@ error() {
 }
 
 # IP adresleri
-MASTER_IP="192.168.1.126"
+MASTER_IP="192.168.1.131"
 WORKER_IP="192.168.1.127"
 
 # Mimariye göre mimari değişkenini belirle
