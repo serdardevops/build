@@ -64,14 +64,25 @@ deploy_and_run() {
     
     log "Script $script_name $machine_name makinesine kopyalanıyor..."
     
-    # SSH anahtarını kopyala
-    ssh-copy-id -i ~/.ssh/id_rsa.pub ubuntu@$machine_name 2>/dev/null || true
-    
-    # Scripti kopyala
-    scp $script_name ubuntu@$machine_name:/tmp/
-    
-    # Scripti çalıştırılabilir yap ve çalıştır
-    ssh ubuntu@$machine_name "chmod +x /tmp/$script_name && sudo /tmp/$script_name"
+    # Eğer makine adı "master" ve "hostname" komutu "master" döndürüyorsa aynı makinedeyiz
+    if [ "$machine_name" = "master" ] && [ "$(hostname)" = "master" ]; then
+        log "Kurulum yerel master makinede yapılıyor..."
+        chmod +x $script_name
+        sudo ./$script_name
+    elif [ "$machine_name" = "worker" ] && [ "$(hostname)" = "worker" ]; then
+        log "Kurulum yerel worker makinede yapılıyor..."
+        chmod +x $script_name
+        sudo ./$script_name
+    else
+        # SSH anahtarını kopyala
+        ssh-copy-id -i ~/.ssh/id_rsa.pub ubuntu@$machine_name 2>/dev/null || true
+        
+        # Scripti kopyala
+        scp $script_name ubuntu@$machine_name:/tmp/
+        
+        # Scripti çalıştırılabilir yap ve çalıştır
+        ssh ubuntu@$machine_name "chmod +x /tmp/$script_name && sudo /tmp/$script_name"
+    fi
 }
 
 # Ana kurulum sürecini başlat
@@ -96,7 +107,13 @@ main() {
     
     # Kubernetes cluster kurulumu
     log "Kubernetes cluster yapılandırması başlatılıyor..."
-    ssh ubuntu@$MASTER_NAME "sudo /tmp/configure-cluster.sh"
+    if [ "$(hostname)" = "master" ]; then
+        log "Cluster yapılandırması yerel master makinede yapılıyor..."
+        chmod +x configure-cluster.sh
+        sudo ./configure-cluster.sh
+    else
+        ssh ubuntu@$MASTER_NAME "sudo /tmp/configure-cluster.sh"
+    fi
     
     log "Tüm kurulumlar tamamlandı!"
     log "Erişim bilgileri:"
