@@ -20,8 +20,8 @@ error() {
 }
 
 # IP adresleri
-MASTER_IP="192.168.1.131"
-WORKER_IP="192.168.1.127"
+MASTER_IP="192.168.1.137"
+WORKER_IP="192.168.1.138"
 
 # Mimariye göre mimari değişkenini belirle
 ARCH=$(dpkg --print-architecture)

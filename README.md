@@ -4,7 +4,7 @@ Bu script, Multipass üzerinde çalışan 2 Ubuntu 24.04 Noble makinesine kapsam
 
 ## 📋 Kurulacak Araçlar
 
-### Master Makine (192.168.1.131)
+### Master Makine (192.168.1.137)
 - **Docker** - Container platformu
 - **Kubernetes Master** - Container orkestrasyon master node (v1.32)
 - **Jenkins** - CI/CD automation server (JDK 21)
@@ -13,7 +13,7 @@ Bu script, Multipass üzerinde çalışan 2 Ubuntu 24.04 Noble makinesine kapsam
 - **Helm** - Kubernetes package manager
 - **Kubernetes Dashboard** - Web UI for Kubernetes
 
-### Worker Makine (192.168.1.127)
+### Worker Makine (192.168.1.138)
 - **Docker** - Container platformu
 - **Kubernetes Worker** - Container orkestrasyon worker node (v1.32)
 - **Node Exporter** - Prometheus monitoring agent
@@ -76,12 +76,12 @@ Kurulum tamamlandığında aşağıdaki servislere erişebilirsiniz:
 
 | Servis | URL | Kullanıcı | Şifre Lokasyonu |
 |--------|-----|-----------|----------------|
-| Jenkins | http://192.168.1.131:8080 | admin | `/home/ubuntu/jenkins-password.txt` |
-| SonarQube | http://192.168.1.131:9000 | admin | admin |
-| ArgoCD | http://192.168.1.131:30080 | admin | `/home/ubuntu/argocd-password.txt` |
-| Kubernetes Dashboard | https://192.168.1.131:30001 | - | `/home/ubuntu/dashboard-token.txt` |
-| Nginx Örnek | http://192.168.1.131:30090 | - | - |
-| Node Exporter | http://192.168.1.127:9100/metrics | - | - |
+| Jenkins | http://192.168.1.137:8080 | admin | `/home/ubuntu/jenkins-password.txt` |
+| SonarQube | http://192.168.1.137:9000 | admin | admin |
+| ArgoCD | http://192.168.1.137:30080 | admin | `/home/ubuntu/argocd-password.txt` |
+| Kubernetes Dashboard | https://192.168.1.137:30001 | - | `/home/ubuntu/dashboard-token.txt` |
+| Nginx Örnek | http://192.168.1.137:30090 | - | - |
+| Node Exporter | http://192.168.1.138:9100/metrics | - | - |
 
 ## 🆕 Ubuntu 24.04 Noble Özellikleri
 
@@ -117,7 +117,7 @@ Kurulum tamamlandığında aşağıdaki servislere erişebilirsiniz:
 ### Node Monitoring
 - Worker makinesinde Node Exporter çalışır
 - Prometheus ile entegre edilebilir
-- Metrics: http://192.168.1.127:9100/metrics
+- Metrics: http://192.168.1.138:9100/metrics
 
 ### Kubernetes Monitoring
 - Metrics Server kurulu

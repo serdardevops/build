@@ -16,8 +16,8 @@ log() {
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
 # Makine bilgileri
-MASTER_IP="192.168.1.131"
-WORKER_IP="192.168.1.127"
+MASTER_IP="192.168.1.137"
+WORKER_IP="192.168.1.138"
 
 # Cluster durumunu kontrol et
 check_cluster_status() {
@@ -222,20 +222,20 @@ $(kubectl get services --all-namespaces)
 
 === ERİŞİM BİLGİLERİ ===
 
-Jenkins: http://192.168.1.131:8080
+Jenkins: http://192.168.1.137:8080
 - Admin şifresi: /home/ubuntu/jenkins-password.txt
 
-SonarQube: http://192.168.1.131:9000
+SonarQube: http://192.168.1.137:9000
 - Varsayılan: admin/admin
 
-ArgoCD: http://192.168.1.131:30080
+ArgoCD: http://192.168.1.137:30080
 - Kullanıcı: admin
 - Şifre: /home/ubuntu/argocd-password.txt
 
-Kubernetes Dashboard: https://192.168.1.131:30001
+Kubernetes Dashboard: https://192.168.1.137:30001
 - Token: /home/ubuntu/dashboard-token.txt
 
-Nginx Örnek: http://192.168.1.131:30090
+Nginx Örnek: http://192.168.1.137:30090
 
 === KUBECTL KOMUTLARI ===
 
@@ -251,7 +251,7 @@ kubectl exec -it <pod-name> -- /bin/bash
 
 === MONİTORİNG ===
 
-Node Exporter (Worker): http://192.168.1.127:9100/metrics
+Node Exporter (Worker): http://192.168.1.138:9100/metrics
 
 EOF
     
