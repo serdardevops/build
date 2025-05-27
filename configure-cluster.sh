@@ -251,7 +251,7 @@ kubectl exec -it <pod-name> -- /bin/bash
 
 === MONİTORİNG ===
 
-Node Exporter (Worker): http://192.168.1.117:9100/metrics
+Node Exporter (Worker): http://192.168.1.127:9100/metrics
 
 EOF
     

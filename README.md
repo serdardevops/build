@@ -13,7 +13,7 @@ Bu script, Multipass üzerinde çalışan 2 Ubuntu 24.04 Noble makinesine kapsam
 - **Helm** - Kubernetes package manager
 - **Kubernetes Dashboard** - Web UI for Kubernetes
 
-### Worker Makine (192.168.1.117)
+### Worker Makine (192.168.1.127)
 - **Docker** - Container platformu
 - **Kubernetes Worker** - Container orkestrasyon worker node (v1.32)
 - **Node Exporter** - Prometheus monitoring agent
@@ -81,7 +81,7 @@ Kurulum tamamlandığında aşağıdaki servislere erişebilirsiniz:
 | ArgoCD | http://192.168.1.131:30080 | admin | `/home/ubuntu/argocd-password.txt` |
 | Kubernetes Dashboard | https://192.168.1.131:30001 | - | `/home/ubuntu/dashboard-token.txt` |
 | Nginx Örnek | http://192.168.1.131:30090 | - | - |
-| Node Exporter | http://192.168.1.117:9100/metrics | - | - |
+| Node Exporter | http://192.168.1.127:9100/metrics | - | - |
 
 ## 🆕 Ubuntu 24.04 Noble Özellikleri
 
@@ -117,7 +117,7 @@ Kurulum tamamlandığında aşağıdaki servislere erişebilirsiniz:
 ### Node Monitoring
 - Worker makinesinde Node Exporter çalışır
 - Prometheus ile entegre edilebilir
-- Metrics: http://192.168.1.117:9100/metrics
+- Metrics: http://192.168.1.127:9100/metrics
 
 ### Kubernetes Monitoring
 - Metrics Server kurulu
