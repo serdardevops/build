@@ -164,8 +164,14 @@ main() {
     cleanup_firewall
     cleanup_iptables
     
-    # Paket artıklarını temizle
-    apt autoremove -y
+    # Paket artıklarını temizle - zaman aşımı ekledik
+    log "Paket artıkları temizleniyor..."
+    timeout 300 apt autoremove -y || {
+        warn "apt autoremove zaman aşımına uğradı veya başarısız oldu."
+        warn "Alternatif temizleme yöntemi uygulanıyor..."
+        apt-get clean
+        apt-get update -y
+    }
     
     log "Temizleme işlemi tamamlandı. Sistemi yeniden başlatmanız önerilir."
     log "Yeniden başlatmak için: sudo reboot"
