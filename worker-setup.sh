@@ -239,6 +239,119 @@ EOF
     log "Log rotation yapılandırıldı"
 }
 
+# Prometheus kurulumu
+install_prometheus() {
+    log "Prometheus kuruluyor..."
+    
+    # Prometheus kullanıcısı ve dizinleri
+    useradd --no-create-home --shell /bin/false prometheus
+    mkdir -p /etc/prometheus /var/lib/prometheus
+    
+    # Prometheus indirme
+    cd /tmp
+    if [ "$ARCH" == "arm64" ]; then
+        wget https://github.com/prometheus/prometheus/releases/download/v2.50.0/prometheus-2.50.0.linux-arm64.tar.gz
+        tar xvf prometheus-2.50.0.linux-arm64.tar.gz
+        cp prometheus-2.50.0.linux-arm64/prometheus /usr/local/bin/
+        cp prometheus-2.50.0.linux-arm64/promtool /usr/local/bin/
+        cp -r prometheus-2.50.0.linux-arm64/consoles /etc/prometheus/
+        cp -r prometheus-2.50.0.linux-arm64/console_libraries /etc/prometheus/
+    else
+        wget https://github.com/prometheus/prometheus/releases/download/v2.50.0/prometheus-2.50.0.linux-amd64.tar.gz
+        tar xvf prometheus-2.50.0.linux-amd64.tar.gz
+        cp prometheus-2.50.0.linux-amd64/prometheus /usr/local/bin/
+        cp prometheus-2.50.0.linux-amd64/promtool /usr/local/bin/
+        cp -r prometheus-2.50.0.linux-amd64/consoles /etc/prometheus/
+        cp -r prometheus-2.50.0.linux-amd64/console_libraries /etc/prometheus/
+    fi
+    
+    # İzinleri ayarla
+    chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
+    chown prometheus:prometheus /usr/local/bin/prometheus /usr/local/bin/promtool
+    
+    # Prometheus yapılandırması
+    cat > /etc/prometheus/prometheus.yml << EOF
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      # - alertmanager:9093
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+    - targets: ['localhost:9090']
+    
+  - job_name: 'node_exporter'
+    static_configs:
+    - targets: ['localhost:9100', '$MASTER_IP:9100']
+EOF
+    
+    chown prometheus:prometheus /etc/prometheus/prometheus.yml
+    
+    # Prometheus servis dosyası
+    cat > /etc/systemd/system/prometheus.service << EOF
+[Unit]
+Description=Prometheus
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/prometheus \
+    --config.file /etc/prometheus/prometheus.yml \
+    --storage.tsdb.path /var/lib/prometheus/ \
+    --web.console.templates=/etc/prometheus/consoles \
+    --web.console.libraries=/etc/prometheus/console_libraries
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Prometheus'u başlat
+    systemctl daemon-reload
+    systemctl enable prometheus
+    systemctl start prometheus
+    
+    # Firewall kuralları
+    ufw allow 9090
+    
+    log "Prometheus kuruldu ve başlatıldı"
+}
+
+# Grafana kurulumu
+install_grafana() {
+    log "Grafana kuruluyor..."
+    
+    # Grafana GPG anahtarı ve repo
+    wget -q -O - https://packages.grafana.com/gpg.key | apt-key add -
+    echo "deb https://packages.grafana.com/oss/deb stable main" | tee /etc/apt/sources.list.d/grafana.list
+    
+    apt update
+    apt install -y grafana
+    
+    # Grafana'yı başlat
+    systemctl enable grafana-server
+    systemctl start grafana-server
+    
+    # Firewall kuralları
+    ufw allow 3000
+    
+    log "Grafana kuruldu ve başlatıldı"
+    log "Grafana web arayüzüne http://$WORKER_IP:3000 adresinden erişebilirsiniz."
+    log "Varsayılan giriş bilgileri: admin / admin"
+}
+
 # Ana kurulum
 main() {
     log "Worker makine kurulumu başlıyor..."
@@ -250,6 +363,8 @@ main() {
     optimize_system
     setup_log_rotation
     install_monitoring
+    install_prometheus
+    install_grafana
     join_cluster
     
     log "Worker makine kurulumu tamamlandı!"
@@ -257,6 +372,8 @@ main() {
     log "IP: $WORKER_IP"
     log "Role: Kubernetes Worker Node"
     log "Monitoring: Node Exporter (Port 9100)"
+    log "Prometheus: http://$WORKER_IP:9090"
+    log "Grafana: http://$WORKER_IP:3000"
 }
 
 main "$@" 

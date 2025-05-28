@@ -381,6 +381,55 @@ EOF
     log "Kubernetes Dashboard kuruldu - Token /home/ubuntu/dashboard-token.txt dosyasında"
 }
 
+# Node Exporter kurulumu
+install_node_exporter() {
+    log "Node Exporter kuruluyor..."
+    
+    # Node Exporter kullanıcısı
+    useradd --no-create-home --shell /bin/false node_exporter
+    
+    # Node Exporter indirme
+    cd /tmp
+    if [ "$ARCH" == "arm64" ]; then
+        wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-arm64.tar.gz
+        tar xvf node_exporter-1.8.2.linux-arm64.tar.gz
+        cp node_exporter-1.8.2.linux-arm64/node_exporter /usr/local/bin/
+    else
+        wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-amd64.tar.gz
+        tar xvf node_exporter-1.8.2.linux-amd64.tar.gz
+        cp node_exporter-1.8.2.linux-amd64/node_exporter /usr/local/bin/
+    fi
+    
+    chown node_exporter:node_exporter /usr/local/bin/node_exporter
+    
+    # Node Exporter systemd service
+    cat > /etc/systemd/system/node_exporter.service << EOF
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Servisi başlat
+    systemctl daemon-reload
+    systemctl enable node_exporter
+    systemctl start node_exporter
+    
+    # Port 9100'ü aç (Node Exporter)
+    ufw allow 9100
+    
+    log "Node Exporter kuruldu"
+}
+
 # Join token oluştur
 create_join_token() {
     log "Node join token oluşturuluyor..."
@@ -406,6 +455,7 @@ main() {
     install_sonarqube
     install_argocd
     install_k8s_dashboard
+    install_node_exporter
     create_join_token
     
     log "Master makine kurulumu tamamlandı!"
@@ -414,6 +464,7 @@ main() {
     log "SonarQube: http://$MASTER_IP:9000"
     log "ArgoCD: http://$MASTER_IP:30080"
     log "Kubernetes Dashboard: https://$MASTER_IP:30001"
+    log "Node Exporter Metrics: http://$MASTER_IP:9100/metrics"
 }
 
 main "$@" 

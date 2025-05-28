@@ -136,6 +136,56 @@ cleanup_argocd() {
     log "ArgoCD temizlendi"
 }
 
+# Prometheus temizliği
+cleanup_prometheus() {
+    log "Prometheus temizleniyor..."
+    
+    systemctl stop prometheus 2>/dev/null || warn "Prometheus servis durdurulamadı"
+    systemctl disable prometheus 2>/dev/null || warn "Prometheus servis devre dışı bırakılamadı"
+    rm -f /etc/systemd/system/prometheus.service || warn "Prometheus servis dosyası temizlenemedi"
+    
+    rm -rf /etc/prometheus/ || warn "/etc/prometheus/ temizlenemedi"
+    rm -rf /var/lib/prometheus/ || warn "/var/lib/prometheus/ temizlenemedi"
+    rm -f /usr/local/bin/prometheus || warn "/usr/local/bin/prometheus temizlenemedi"
+    rm -f /usr/local/bin/promtool || warn "/usr/local/bin/promtool temizlenemedi"
+    
+    userdel -r prometheus 2>/dev/null || warn "prometheus kullanıcısı silinemedi"
+    
+    log "Prometheus temizlendi"
+}
+
+# Grafana temizliği
+cleanup_grafana() {
+    log "Grafana temizleniyor..."
+    
+    systemctl stop grafana-server 2>/dev/null || warn "Grafana servis durdurulamadı"
+    systemctl disable grafana-server 2>/dev/null || warn "Grafana servis devre dışı bırakılamadı"
+    
+    apt purge -y grafana || warn "Grafana paketi kaldırılamadı"
+    rm -rf /var/lib/grafana/ || warn "/var/lib/grafana/ temizlenemedi"
+    rm -rf /etc/grafana/ || warn "/etc/grafana/ temizlenemedi"
+    
+    # Grafana repo kaldır
+    rm -f /etc/apt/sources.list.d/grafana.list || warn "Grafana repo dosyası temizlenemedi"
+    
+    log "Grafana temizlendi"
+}
+
+# Node Exporter temizliği
+cleanup_node_exporter() {
+    log "Node Exporter temizleniyor..."
+    
+    systemctl stop node_exporter 2>/dev/null || warn "Node Exporter servis durdurulamadı"
+    systemctl disable node_exporter 2>/dev/null || warn "Node Exporter servis devre dışı bırakılamadı"
+    rm -f /etc/systemd/system/node_exporter.service || warn "Node Exporter servis dosyası temizlenemedi"
+    
+    rm -f /usr/local/bin/node_exporter || warn "/usr/local/bin/node_exporter temizlenemedi"
+    
+    userdel -r node_exporter 2>/dev/null || warn "node_exporter kullanıcısı silinemedi"
+    
+    log "Node Exporter temizlendi"
+}
+
 # Firewall kurallarını temizle
 cleanup_firewall() {
     log "Firewall kuralları temizleniyor..."
@@ -175,6 +225,9 @@ main() {
     cleanup_jenkins
     cleanup_sonarqube
     cleanup_argocd
+    cleanup_prometheus
+    cleanup_grafana
+    cleanup_node_exporter
     cleanup_firewall
     cleanup_iptables
     
