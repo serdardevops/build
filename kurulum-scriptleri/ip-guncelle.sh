@@ -27,6 +27,7 @@ warn() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MASTER_SCRIPT="$SCRIPT_DIR/master-kurulum.sh"
 WORKER_SCRIPT="$SCRIPT_DIR/worker-kurulum.sh"
+TEST_SCRIPT="$SCRIPT_DIR/test-devops.sh"
 README_FILE="$SCRIPT_DIR/README.md"
 
 # Mevcut değerleri kontrol et
@@ -121,10 +122,11 @@ update_readme() {
 # IP adreslerini güncelle
 update_file_ips "$MASTER_SCRIPT" "$CURRENT_MASTER_IP" "$NEW_MASTER_IP" "$CURRENT_WORKER_IP" "$NEW_WORKER_IP"
 update_file_ips "$WORKER_SCRIPT" "$CURRENT_MASTER_IP" "$NEW_MASTER_IP" "$CURRENT_WORKER_IP" "$NEW_WORKER_IP"
+update_file_ips "$TEST_SCRIPT" "$CURRENT_MASTER_IP" "$NEW_MASTER_IP" "$CURRENT_WORKER_IP" "$NEW_WORKER_IP"
 update_readme "$README_FILE" "$CURRENT_MASTER_IP" "$NEW_MASTER_IP" "$CURRENT_WORKER_IP" "$NEW_WORKER_IP"
 
 # Çalışır hale getir
-chmod +x "$MASTER_SCRIPT" "$WORKER_SCRIPT"
+chmod +x "$MASTER_SCRIPT" "$WORKER_SCRIPT" "$TEST_SCRIPT"
 
 log "IP güncelleme işlemi tamamlandı!"
 log "Yeni Master IP: $NEW_MASTER_IP"
@@ -132,4 +134,5 @@ log "Yeni Worker IP: $NEW_WORKER_IP"
 log ""
 log "Kurulum scriptlerini aşağıdaki gibi çalıştırabilirsiniz:"
 log "Master: sudo $MASTER_SCRIPT"
-log "Worker: sudo $WORKER_SCRIPT" 
+log "Worker: sudo $WORKER_SCRIPT"
+log "Test: sudo $TEST_SCRIPT" 

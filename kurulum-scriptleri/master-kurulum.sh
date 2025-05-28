@@ -247,8 +247,8 @@ install_helm() {
 install_jenkins() {
     log "Jenkins kuruluyor..."
     
-    # Java 21 kurulumu - Ubuntu 24.04 için güncellendi
-    apt install -y openjdk-21-jdk
+    # Java 17 kurulumu
+    apt install -y openjdk-17-jdk
     
     # Jenkins repository
     curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
@@ -300,7 +300,7 @@ install_sonarqube() {
         
         # ARM64 için wrapper.conf oluşturma ve düzenleme
         mkdir -p /opt/sonarqube/conf/
-        echo "wrapper.java.command=/usr/bin/java" > /opt/sonarqube/conf/wrapper.conf
+        echo "wrapper.java.command=/usr/lib/jvm/java-17-openjdk-arm64/bin/java" > /opt/sonarqube/conf/wrapper.conf
         
         # SonarQube başlatma scriptini ARM için düzenle
         if [ ! -d "/opt/sonarqube/bin/linux-arm64" ]; then
@@ -312,6 +312,10 @@ install_sonarqube() {
         wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-9.9.0.65466.zip
         unzip sonarqube-9.9.0.65466.zip
         mv sonarqube-9.9.0.65466 sonarqube
+        
+        # X86_64 için wrapper.conf oluşturma ve düzenleme
+        mkdir -p /opt/sonarqube/conf/
+        echo "wrapper.java.command=/usr/lib/jvm/java-17-openjdk-amd64/bin/java" > /opt/sonarqube/conf/wrapper.conf
     fi
     
     chown -R sonar:sonar sonarqube
