@@ -4,7 +4,7 @@ Bu script, Multipass üzerinde çalışan 2 Ubuntu 24.04 Noble makinesine kapsam
 
 ## 📋 Kurulacak Araçlar
 
-### Master Makine (192.168.1.137)
+### Master Makine 
 - **Docker** - Container platformu
 - **Kubernetes Master** - Container orkestrasyon master node (v1.32)
 - **Jenkins** - CI/CD automation server (JDK 21)
@@ -13,7 +13,7 @@ Bu script, Multipass üzerinde çalışan 2 Ubuntu 24.04 Noble makinesine kapsam
 - **Helm** - Kubernetes package manager
 - **Kubernetes Dashboard** - Web UI for Kubernetes
 
-### Worker Makine (192.168.1.138)
+### Worker Makine 
 - **Docker** - Container platformu
 - **Kubernetes Worker** - Container orkestrasyon worker node (v1.32)
 - **Node Exporter** - Prometheus monitoring agent
