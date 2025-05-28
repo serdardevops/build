@@ -61,8 +61,8 @@ setup_firewall() {
     # Master ile iletişim
     ufw allow from $MASTER_IP
     
-    # Pod-to-pod communication
-    ufw allow 10244.0.0.0/16
+    # Pod-to-pod communication - Bu kural hatalıydı, düzeltildi
+    ufw allow from 10.244.0.0/16
     
     log "Firewall kuralları uygulandı"
 }
