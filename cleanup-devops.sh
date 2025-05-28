@@ -98,16 +98,30 @@ cleanup_jenkins() {
 cleanup_sonarqube() {
     log "SonarQube temizleniyor..."
     
-    systemctl stop sonarqube || warn "SonarQube servis durdurulamadı"
-    rm -f /etc/systemd/system/sonarqube.service || warn "SonarQube servis dosyası temizlenemedi"
-    rm -rf /opt/sonarqube/ || warn "/opt/sonarqube/ temizlenemedi"
+    # SonarQube ayarları
+    SONAR_USER="sonar"
+    SONAR_HOME="/opt/sonarqube"
+    SONAR_SERVICE_FILE="/etc/systemd/system/sonarqube.service"
+    
+    # SonarQube servisini durdur ve kaldır
+    systemctl stop sonarqube 2>/dev/null || warn "SonarQube servis durdurulamadı"
+    systemctl disable sonarqube 2>/dev/null || warn "SonarQube servis devre dışı bırakılamadı"
+    rm -f $SONAR_SERVICE_FILE || warn "SonarQube servis dosyası temizlenemedi"
+    systemctl daemon-reload
+    
+    # SonarQube dizinlerini temizle
+    rm -rf $SONAR_HOME || warn "$SONAR_HOME temizlenemedi"
     
     # PostgreSQL temizliği
-    sudo -u postgres dropdb sonarqube || warn "SonarQube veritabanı silinemedi"
-    sudo -u postgres dropuser sonar || warn "SonarQube kullanıcısı silinemedi"
+    sudo -u postgres dropdb sonarqube 2>/dev/null || warn "SonarQube veritabanı silinemedi"
+    sudo -u postgres dropuser sonar 2>/dev/null || warn "SonarQube kullanıcısı silinemedi"
     
     # SonarQube kullanıcısını kaldır
-    userdel -r sonar 2>/dev/null || warn "sonar kullanıcısı silinemedi"
+    userdel -r $SONAR_USER 2>/dev/null || warn "sonar kullanıcısı silinemedi"
+    
+    # Sistem limitleri temizle
+    sed -i '/vm.max_map_count=524288/d' /etc/sysctl.conf 2>/dev/null || true
+    sed -i '/fs.file-max=131072/d' /etc/sysctl.conf 2>/dev/null || true
     
     log "SonarQube temizlendi"
 }
