@@ -378,11 +378,42 @@ install_argocd() {
         rm argocd-linux-amd64
     fi
     
-    # ArgoCD admin şifresini al
+    # ArgoCD'nin hazır olmasını bekle (60 saniye)
+    log "ArgoCD'nin hazır olması bekleniyor..."
     sleep 60
-    ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
-    echo "ArgoCD Admin Şifresi: $ARGOCD_PASSWORD" > /home/ubuntu/argocd-password.txt
+    
+    # ArgoCD admin şifresini al
+    log "ArgoCD admin şifresi alınıyor..."
+    ARGOCD_PASSWORD=""
+    
+    # initial-admin-secret'ten şifreyi almayı dene
+    if kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d > /home/ubuntu/argocd-password.txt; then
+        log "ArgoCD şifresi initial-admin-secret'ten alındı"
+        ARGOCD_PASSWORD=$(cat /home/ubuntu/argocd-password.txt)
+    else
+        # initial-admin-secret bulunamadı, alternatif yöntem kullan
+        log "ArgoCD initial-admin-secret bulunamadı, yeni şifre oluşturuluyor..."
+        
+        # Rastgele şifre oluştur
+        NEW_PASSWORD=$(openssl rand -base64 12)
+        
+        # Şifreyi dosyaya kaydet
+        echo "$NEW_PASSWORD" > /home/ubuntu/argocd-password.txt
+        
+        # ArgoCD şifresini değiştir
+        kubectl -n argocd patch secret argocd-secret \
+            -p '{"stringData": {
+                "admin.password": "'$(htpasswd -bnBC 10 "" $NEW_PASSWORD | tr -d ':\n')'",
+                "admin.passwordMtime": "'$(date +%FT%T%Z)'"
+            }}'
+        
+        ARGOCD_PASSWORD=$NEW_PASSWORD
+        log "ArgoCD için yeni şifre oluşturuldu"
+    fi
+    
+    # Şifre dosyasının izinlerini düzenle
     chown ubuntu:ubuntu /home/ubuntu/argocd-password.txt
+    chmod 600 /home/ubuntu/argocd-password.txt
     
     log "ArgoCD kuruldu - Şifre /home/ubuntu/argocd-password.txt dosyasında"
 }
