@@ -67,8 +67,11 @@ test_kubernetes() {
     header "Kubernetes Testi"
     
     # Kubernetes versiyonu
-    log "Kubernetes versiyonu kontrol ediliyor..."
-    kubectl version --short
+    log "Kubernetes client versiyonu kontrol ediliyor..."
+    kubectl version --client=true --output=json 2>/dev/null | grep -o '"gitVersion":"[^"]*"' | cut -d'"' -f4 || echo "Client version bilgisi alınamadı"
+    
+    log "Kubernetes server versiyonu kontrol ediliyor..."
+    kubectl version --output=json 2>/dev/null | grep -o '"gitVersion":"[^"]*"' | cut -d'"' -f4 || echo "Server version bilgisi alınamadı (cluster erişimi gerekebilir)"
     
     # Node'ları listele
     log "Kubernetes node'ları listeleniyor..."
