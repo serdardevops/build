@@ -288,6 +288,60 @@ test_node_exporter() {
     log "Node Exporter metrics URL: http://$WORKER_IP:9100/metrics"
 }
 
+# Worker Prometheus testi
+test_prometheus() {
+    if [ "$IS_MASTER" = true ]; then
+        warn "Bu master makinedir. Prometheus testi atlanıyor."
+        return
+    fi
+    
+    header "Prometheus Testi"
+    
+    # Prometheus çalışıyor mu?
+    log "Prometheus servis durumu kontrol ediliyor..."
+    systemctl status prometheus | grep Active
+    
+    # Prometheus portu açık mı?
+    log "Prometheus port kontrolü yapılıyor..."
+    nc -zv localhost 9090 || warn "Prometheus portu (9090) açık değil!"
+    
+    # Prometheus API test et
+    log "Prometheus API kontrol ediliyor..."
+    curl -s http://localhost:9090/api/v1/status/targets | head -5
+    
+    # Prometheus URL'i görüntüle
+    log "Prometheus web arayüzü: http://$WORKER_IP:9090"
+    log "Prometheus API: http://$WORKER_IP:9090/api/v1/"
+}
+
+# Worker Grafana testi
+test_grafana() {
+    if [ "$IS_MASTER" = true ]; then
+        warn "Bu master makinedir. Grafana testi atlanıyor."
+        return
+    fi
+    
+    header "Grafana Testi"
+    
+    # Grafana çalışıyor mu?
+    log "Grafana servis durumu kontrol ediliyor..."
+    systemctl status grafana-server | grep Active
+    
+    # Grafana portu açık mı?
+    log "Grafana port kontrolü yapılıyor..."
+    nc -zv localhost 3000 || warn "Grafana portu (3000) açık değil!"
+    
+    # Grafana API test et
+    log "Grafana API kontrol ediliyor..."
+    curl -s http://localhost:3000/api/health || warn "Grafana API erişilemez!"
+    
+    # Grafana giriş bilgileri
+    log "Grafana giriş bilgileri:"
+    log "URL: http://$WORKER_IP:3000"
+    log "Kullanıcı adı: admin"
+    log "Şifre: admin (ilk girişte değiştirmeniz istenecek)"
+}
+
 # Nginx örnek test
 test_nginx_example() {
     if [ "$IS_MASTER" = false ]; then
@@ -354,6 +408,8 @@ show_cluster_summary() {
     echo -e "${GREEN}| Kubernetes Dashboard  | https://$MASTER_IP:30001 |${NC}"
     echo -e "${GREEN}| Nginx Örnek           | http://$MASTER_IP:30090 |${NC}"
     echo -e "${GREEN}| Node Exporter (Worker)| http://$WORKER_IP:9100  |${NC}"
+    echo -e "${GREEN}| Prometheus (Worker)   | http://$WORKER_IP:9090  |${NC}"
+    echo -e "${GREEN}| Grafana (Worker)      | http://$WORKER_IP:3000  |${NC}"
     echo -e "${GREEN}------------------------------------------------${NC}"
     
     # Şifreleri listele
@@ -365,6 +421,7 @@ show_cluster_summary() {
     echo -e "${YELLOW}| SonarQube             | admin         | admin (ilk girişte değiştirin) |${NC}"
     echo -e "${YELLOW}| ArgoCD                | admin         | /home/ubuntu/argocd-password.txt |${NC}"
     echo -e "${YELLOW}| Kubernetes Dashboard  | -             | /home/ubuntu/dashboard-token.txt |${NC}"
+    echo -e "${YELLOW}| Grafana (Worker)      | admin         | admin (ilk girişte değiştirin) |${NC}"
     echo -e "${YELLOW}---------------------------------------------------------------${NC}"
     
     # Cluster bilgileri dosyasını görüntüle
@@ -425,6 +482,12 @@ main() {
     
     # Node Exporter testi (sadece worker'da)
     test_node_exporter
+    
+    # Prometheus testi (sadece worker'da)
+    test_prometheus
+    
+    # Grafana testi (sadece worker'da)
+    test_grafana
     
     # Cluster özeti
     show_cluster_summary
