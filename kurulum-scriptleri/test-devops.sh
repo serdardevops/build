@@ -66,6 +66,40 @@ check_machine_type() {
 test_kubernetes() {
     header "Kubernetes Testi"
     
+    # Kubectl yapılandırmasını kontrol et
+    log "Kubectl yapılandırması kontrol ediliyor..."
+    log "KUBECONFIG değişkeni: ${KUBECONFIG:-'Tanımlı değil'}"
+    log "Kubeconfig dosyası konumu:"
+    kubectl config view --minify | grep server || echo "Server bilgisi bulunamadı"
+    
+    # Kubernetes bağlantısını test et
+    log "Kubernetes API sunucusuna bağlantı test ediliyor..."
+    if kubectl cluster-info 2>/dev/null | head -5; then
+        log "Kubernetes cluster'a başarıyla bağlandı"
+    else
+        error "Kubernetes cluster'a bağlanılamadı!"
+        log "Cluster info detayları:"
+        kubectl cluster-info 2>&1 | head -10
+        
+        log "Kubeconfig dosyası içeriği kontrol ediliyor:"
+        if [ -f ~/.kube/config ]; then
+            log "~/.kube/config dosyası mevcut"
+            grep -E "(server|certificate-authority)" ~/.kube/config || echo "Server veya CA bilgisi bulunamadı"
+        else
+            warn "~/.kube/config dosyası bulunamadı!"
+        fi
+        
+        if [ -f /etc/kubernetes/admin.conf ]; then
+            log "/etc/kubernetes/admin.conf dosyası mevcut"
+            log "KUBECONFIG ortam değişkenini ayarlamayı deneyin:"
+            log "export KUBECONFIG=/etc/kubernetes/admin.conf"
+        else
+            warn "/etc/kubernetes/admin.conf dosyası bulunamadı!"
+        fi
+        
+        return 1
+    fi
+    
     # Kubernetes versiyonu
     log "Kubernetes client versiyonu kontrol ediliyor..."
     kubectl version --client=true --output=json 2>/dev/null | grep -o '"gitVersion":"[^"]*"' | cut -d'"' -f4 || echo "Client version bilgisi alınamadı"
@@ -75,27 +109,23 @@ test_kubernetes() {
     
     # Node'ları listele
     log "Kubernetes node'ları listeleniyor..."
-    kubectl get nodes -o wide
+    kubectl get nodes -o wide || { error "Node'lar listelenemedi!"; return 1; }
     
     # Namespace'leri listele
     log "Kubernetes namespace'leri listeleniyor..."
-    kubectl get namespaces
+    kubectl get namespaces || { error "Namespace'ler listelenemedi!"; return 1; }
     
     # Pod'ları listele
     log "Kubernetes pod'ları listeleniyor..."
-    kubectl get pods --all-namespaces
+    kubectl get pods --all-namespaces || { error "Pod'lar listelenemedi!"; return 1; }
     
     # Servis'leri listele
     log "Kubernetes servisleri listeleniyor..."
-    kubectl get services --all-namespaces
+    kubectl get services --all-namespaces || { error "Servisler listelenemedi!"; return 1; }
     
     # Deployment'ları listele
     log "Kubernetes deployment'ları listeleniyor..."
-    kubectl get deployments --all-namespaces
-    
-    # Cluster durumunu kontrol et
-    log "Cluster durumu kontrol ediliyor..."
-    kubectl cluster-info
+    kubectl get deployments --all-namespaces || { error "Deployment'lar listelenemedi!"; return 1; }
 }
 
 # Docker testi
