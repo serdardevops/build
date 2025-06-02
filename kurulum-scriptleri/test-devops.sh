@@ -30,8 +30,8 @@ header() {
 }
 
 # IP adresleri
-MASTER_IP="192.168.64.42"
-WORKER_IP="192.168.1.138"
+MASTER_IP="192.168.1.118"
+WORKER_IP="192.168.1.119"
 
 # Makine türünü kontrol et
 check_machine_type() {
@@ -65,6 +65,17 @@ check_machine_type() {
 # Kubernetes testi
 test_kubernetes() {
     header "Kubernetes Testi"
+    
+    # Root kullanıcısı için kubectl konfigürasyonunu ayarla
+    if [ "$(id -u)" -eq 0 ]; then
+        if [ -f /etc/kubernetes/admin.conf ]; then
+            export KUBECONFIG=/etc/kubernetes/admin.conf
+            log "Root kullanıcısı için KUBECONFIG ayarlandı: /etc/kubernetes/admin.conf"
+        elif [ -f /home/ubuntu/.kube/config ]; then
+            export KUBECONFIG=/home/ubuntu/.kube/config
+            log "Root kullanıcısı için KUBECONFIG ayarlandı: /home/ubuntu/.kube/config"
+        fi
+    fi
     
     # Kubectl yapılandırmasını kontrol et
     log "Kubectl yapılandırması kontrol ediliyor..."
