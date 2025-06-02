@@ -30,7 +30,7 @@ header() {
 }
 
 # IP adresleri
-MASTER_IP="192.168.1.137"
+MASTER_IP="192.168.64.42"
 WORKER_IP="192.168.1.138"
 
 # Makine türünü kontrol et
